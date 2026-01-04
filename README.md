@@ -22,8 +22,8 @@ proposed framework is an end-to-end Arabic QA system to answer Islamic questions
 
 ```bash
 
-git clone https://github.com/Shymaa2611/Islamic-Question-Answering-System.git
-cd Islamic-Question-Answering-System
+git clone https://github.com/Shymaa2611/End-to-end-Islamic-Question-Answering-System-Generation.git
+cd End-to-end-Islamic-Question-Answering-System-Generation
 
 ```
 
