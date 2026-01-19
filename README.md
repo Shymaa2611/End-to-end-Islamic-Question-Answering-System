@@ -13,10 +13,8 @@ Given an input question, the system retrieves the top-K relevant passages from a
 Both the question and candidate passages are encoded using a sentence embedding model, and cosine similarity is computed to rank passages based on semantic relevance.
 
 ### Reranking
-To refine the retrieved results, we employ NAMAA Space GATE Reranker V1 (GATE), a cross-encoder model fine-tuned by NUR for the IslamicEval 2025 Shared Task.
-GATE is built upon AraBERT and utilizes the Arabic Triplet Matryoshka training strategy, achieving strong performance while remaining computationally efficient.
+to re-rank the retrieved passages, we employed NAMAA Space GATE Reranker V1 (GATE) the baseline model. GATE is a cross-encoder–based model built on AraBERT and trained using the Arabic Triplet Matryoshka strategy , which enabled it to learn fine-grained relevance distinctions between candidate passages while remaining computationally efficient. By jointly encoding question–passage pairs, the reranker leveraged cross-attention mechanisms to capture contextual and semantic interactions, producing more accurate relevance scores than retrieval-only methods .
 
-For zero-answer detection, a threshold-based decision mechanism is applied. If all reranked passages score below a predefined threshold, the question is classified as having no valid answer, and the system returns −1.
 ###  In-Context Learning
 In-Context Learning (ICL) enables a language model to perform a task by conditioning on a small set of input–output demonstrations included directly in the prompt, without updating model parameters.
 While effective, ICL performance is highly sensitive to demonstration selection.
@@ -28,6 +26,7 @@ To address this, we adopt a retrieval–reranking-based demonstration selection 
   training data.
 - These pairs are used as in-context demonstrations.
 This approach ensures that demonstrations are not only semantically similar to the input question, but also highly relevant at the interaction level, resulting in more effective and informative ICL.
+
 ###  Answer EXtraction
 
 Final answer extract is performed using a large language model (LLM) from Mistral AI.
@@ -44,6 +43,9 @@ Question: User input
 Context: Top-K reranked passages
 Answer: Left empty for model generation
 By enforcing a consistent context–question–answer format, the model is guided to produce answers that are faithful to the retrieved evidence, significantly reducing hallucinations and improving answer quality.
+
+![Prompt Template](images/template.png)
+
 
 ## Installation & Requirements
 

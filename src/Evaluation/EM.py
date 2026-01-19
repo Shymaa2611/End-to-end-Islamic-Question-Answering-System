@@ -44,7 +44,7 @@ def load_data_csv(file_path):
 
 
 def main():
-    eval_data = load_data_csv("/content/test_data_oneshot_70.csv")
+    eval_data = load_data_csv("/content/test_data_oneshot_20.csv")
     EM = []
     for item in eval_data:
         truth = item["answer"]

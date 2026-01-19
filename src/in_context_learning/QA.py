@@ -52,8 +52,6 @@ def build_faiss_index(embeddings):
 
 model = CrossEncoder("yoriis/GTE-tydi-quqa-haqa")
 
-#test_df = pd.read_csv("/content/IslamicEval2025/data/Task Data/data/QH-QA-25_Subtask2_ayatec_v1.3_test.tsv", sep="\t", names=["question_id", "question"])
-
 diacritics_pattern = re.compile(r'[\u064B-\u0652\u0670]')
 
 quran_passages = []
@@ -85,7 +83,7 @@ print(f" Loaded total passages: {len(all_passages)}")
 quran_texts = [p["text"] for p in quran_passages]
 hadith_texts = [p["text"] for p in hadith_passages]
 
-# Encode
+
 quran_embeddings = retrieval_model.encode(
     quran_texts,
     convert_to_numpy=True,
@@ -135,74 +133,6 @@ def search(query, k_quran=50, k_hadith=20):
     results = sorted(results, key=lambda x: x['score'], reverse=True)
     return results
 
-"""
-def predict_test_rerank_crossencoder(test_df, model, search_fn, k_retrieve=70, score_threshold=0.15, max_returned=20):
-    test_df["question_id"] = test_df["question_id"].astype(str)
-
-    qid_to_question = test_df.drop_duplicates("question_id")[["question_id", "question"]].set_index("question_id")["question"].to_dict()
-
-    all_results = []
-
-    for qid, question in tqdm(qid_to_question.items(), desc="Questions"):
-        retrieved = search_fn(question)
-        candidate_texts = [r["text"] for r in retrieved]
-        candidate_ids = [r["id"] for r in retrieved]
-
-        reranked = model.rank(query=question, documents=candidate_texts)
-
-        filtered = [item for item in reranked if item['score'] >= score_threshold]
-        filtered = sorted(filtered, key=lambda x: x['score'], reverse=True)[:max_returned]
-
-        if not filtered:
-            all_results.append({
-                "question_id": qid,
-                "passage_id": "-1",
-                "score": 0,
-            })
-            continue
-
-        for item in filtered:
-            all_results.append({
-                "question_id": qid,
-                "passage_id": candidate_ids[item['corpus_id']],
-                "score": item['score']
-            })
-
-    return pd.DataFrame(all_results)
-
-test_results = predict_test_rerank_crossencoder(test_df, model, search_fn=search, k_retrieve=70)
-
-test_results.to_csv("run_03_crossenc.csv", index = False)
-"""
-
-"""
-def trec_formatter(df):
-    tag = "nur_run03"
-
-    # Rank passages within each question_id
-    df["rank"] = df.groupby("question_id")["score"].rank(ascending=False, method="first").astype(int)
-
-    # Create TREC-format DataFrame
-    trec_df = pd.DataFrame({
-        "qid": df["question_id"],
-        "Q0": "Q0",
-        "pid": df["passage_id"],
-        "rank": df["rank"],
-        "score": df["score"].round(4),
-        "tag": tag
-    })
-
-    # Save as TSV
-    return trec_df
-
-
-trec_df = trec_formatter(test_results)
-
-trec_df.to_csv("ranked_03.tsv", sep="\t", index=False, header=False)
-
-"""
-
-# Predict Question RElevant Passages
 def predict_Question_rerank_crossencoder(question, model, search_fn, k_retrieve=70, score_threshold=0.15, max_returned=20):
     all_results = []
     retrieved = search_fn(question)
@@ -238,12 +168,7 @@ def QA(question):
     response = model2.generate_content(prompt)
     return response.text
 
-
-
-# Perprocessing For Answer Format
-
-
-""" def QA_model(question,model2):
+def QA_model(question,model2):
     candiated_passages=predict_Question_rerank_crossencoder(question, model, search_fn=search, k_retrieve=70)
     context = "\n".join([f"Passage {i+1}: {p}" for i, p in enumerate(candiated_passages)])
     prompt=template(question,context)
@@ -269,7 +194,7 @@ def QA(question):
     response.raise_for_status()  
 
     return response.json()["choices"][0]["message"]["content"]
-    """
+ 
 
    
 

@@ -8,14 +8,14 @@ import pandas as pd
 from bert_score import BERTScorer
 
 
-# ===== Initialize BERTScore =====
+
 scorer = BERTScorer(
     model_type="aubmindlab/bert-base-arabertv02",
     num_layers=12,
     lang="ar"
 )
 
-# ===== Load CSV data =====
+
 def load_data_csv(file_path):
     df = pd.read_csv(file_path)
     data = []
@@ -30,7 +30,6 @@ def load_data_csv(file_path):
     return data
 
 
-# ===== BERTScore computation =====
 def compute_bert_score(truth, prediction):
     if truth == "" or prediction == "":
         return 0.0, 0.0, 0.0
@@ -43,7 +42,7 @@ def compute_bert_score(truth, prediction):
         float(F1.mean().item())
     )
 
-# ===== Main evaluation loop =====
+
 def main():
     eval_data = load_data_csv("/content/End-to-end-Islamic-Question-Answering-System/data/Evaluation Data/Zeroshot/test_data_zeroshot_10.csv")
     P_scores, R_scores, F1_scores = [], [], []
@@ -58,6 +57,7 @@ def main():
     print(f"Recall:    {sum(R_scores)/len(R_scores)}")
     print(f"F1 Score:  {sum(F1_scores)/len(F1_scores)}")
     
+
 if __name__ == "__main__":
     main()
 

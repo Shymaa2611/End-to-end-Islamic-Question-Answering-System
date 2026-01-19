@@ -25,7 +25,7 @@ def load_data_csv(file_path):
     return data
 
 def main():
-    eval_data = load_data_csv("/content/End-to-end-Islamic-Question-Answering-System/data/Evaluation Data/Zeroshot/test_data_zeroshot_20.csv")
+    eval_data = load_data_csv("/content/test_data_zeroshot_5.csv")
     for item in eval_data:
         question = item["question"]
         ground_truth = item["answer"]
