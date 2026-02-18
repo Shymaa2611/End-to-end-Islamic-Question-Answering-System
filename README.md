@@ -42,7 +42,7 @@ The system integrates retrieval-augmented generation with in-context learning to
 ## 🏗️ System Overview
 
 <p align="center">
-  <img src="images/framework.png" width="85%">
+  <img src="images/framework.png" width="100%">
 </p>
 
 The system pipeline consists of four major stages:
