@@ -13,6 +13,9 @@
   <img src="https://img.shields.io/badge/Python-3.10-blue">
   <img src="https://img.shields.io/badge/LLM-Mistral-orange">
   <img src="https://img.shields.io/badge/Task-Islamic%20QA-success">
+  <a href="https://arxiv.org/abs/XXXX.XXXXX">
+    <img src="https://img.shields.io/badge/Paper-arXiv-red">
+  </a>
 </p>
 
 ---
