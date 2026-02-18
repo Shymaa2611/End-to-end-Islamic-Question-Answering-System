@@ -118,7 +118,6 @@ This structured prompting enhances factual grounding and reduces hallucination.
 
 ---
 
-## ⚙️ Implementation
 
 ### Requirements
 
@@ -131,5 +130,55 @@ This structured prompting enhances factual grounding and reduces hallucination.
 pip install huggingface_hub==0.13.4
 pip install -U sentence-transformers
 pip install faiss-cpu
-pip install -U google-generativeai
-pip install -U google-genai
+
+```
+
+## 🚀 Installation
+
+### Clone Repository
+
+```bash
+git clone https://github.com/Shymaa2611/End-to-end-Islamic-Question-Answering-System-Generation.git
+cd End-to-end-Islamic-Question-Answering-System-Generation
+
+```
+
+### Create Virtual Environment
+
+```bash
+
+python -m venv venv
+source venv/bin/activate
+venv\Scripts\activate
+
+```
+
+### Install Dependencies
+
+```bash
+
+pip install -r requirements.txt
+
+```
+## ▶️ Running the System
+
+### Demonstration Selection
+
+```bash
+
+python src/in_Context_learning/retrieve_demonstrations.py
+
+```
+
+## 📊 Evaluation
+
+```bash
+
+python src/Evaluation/eval.py
+
+```
+
+## 📝 Conclusion
+
+This project introduces a structured, evidence-grounded Islamic QA framework that combines retrieval, reranking, in-context learning, and constrained LLM generation.
+The architecture ensures factual reliability, contextual relevance, and faithfulness to Qur’anic and Hadith sources while providing a scalable foundation for Arabic religious question answering systems.
