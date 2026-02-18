@@ -1,27 +1,16 @@
 # !pip install faiss-gpu-cu11==1.10.0
 # !pip install --upgrade sentence_transformers
 
-import pandas as pd
+
 import json
 import faiss
 import numpy as np
 import torch
-from tqdm import tqdm
-from sentence_transformers import CrossEncoder, InputExample, SentenceTransformer
-from transformers import AutoTokenizer, AutoModel
-from huggingface_hub import login, hf_hub_download
-from sklearn.model_selection import train_test_split
-from torch.utils.data import Dataset, DataLoader
-from collections import defaultdict
-import ast
-import random
-import os
-import gzip
-import re
-import google.generativeai as genai
+from sentence_transformers import CrossEncoder, SentenceTransformer
+
 import re
 from huggingface_hub import snapshot_download
-from run import template
+from retrieve_demonstrations import template
 import requests
 import json
 snapshot_download(
@@ -39,25 +28,25 @@ retrieval_tokenizer = retrieval_model.tokenizer
 retrieval_model.to(device)
 retrieval_model.eval()
 
+model = CrossEncoder("yoriis/GTE-tydi-quqa-haqa")
+diacritics_pattern = re.compile(r'[\u064B-\u0652\u0670]')
+
 # EMBEDS FUNCTION
 def get_embedding(text):
     with torch.no_grad():
         emb = retrieval_model.encode(text, convert_to_numpy=True, device=device)
     return emb
 
+# Indexing Function
 def build_faiss_index(embeddings):
     index = faiss.IndexFlatIP(embeddings.shape[1])
     index.add(embeddings)
     return index
 
-model = CrossEncoder("yoriis/GTE-tydi-quqa-haqa")
-
-#test_df = pd.read_csv("/content/IslamicEval2025/data/Task Data/data/QH-QA-25_Subtask2_ayatec_v1.3_test.tsv", sep="\t", names=["question_id", "question"])
-
-diacritics_pattern = re.compile(r'[\u064B-\u0652\u0670]')
 
 quran_passages = []
 
+# Read Data
 with open("/content/End-to-end-Islamic-Question-Answering-System/data/QH-QA-25_Subtask2_QPC_v1.1.tsv", "r", encoding="utf-8") as f:
     for line in f:
         parts = line.strip().split("\t")
@@ -73,7 +62,7 @@ print(f" Loaded total passages: {len(all_passages)}")
 quran_texts = [p["text"] for p in quran_passages]
 
 
-# Encode
+# Encoding
 quran_embeddings = retrieval_model.encode(
     quran_texts,
     convert_to_numpy=True,
@@ -82,9 +71,10 @@ quran_embeddings = retrieval_model.encode(
     normalize_embeddings=True
 )
 
-
+# quran passages indexing
 quran_index = build_faiss_index(quran_embeddings)
 
+# Return list of  Relevant Quran & Hadith Passages with Score
 def search(query, k_quran=50, k_hadith=20):
     query_emb = get_embedding(query)
 
@@ -108,13 +98,12 @@ def search(query, k_quran=50, k_hadith=20):
     return results
 
 
-# Predict Question RElevant Passages
+# Return list of Rerank Relevant Quran & Hadith Passages with Score
 def predict_Question_rerank_crossencoder(question, model, search_fn, k_retrieve=70, score_threshold=0.15, max_returned=5):
     all_results = []
     retrieved = search_fn(question)
     candidate_texts = [r["text"] for r in retrieved]
-    #candidate_ids = [r["id"] for r in retrieved]
-
+  
     # rerank step
     reranked = model.rank(query=question, documents=candidate_texts)
     # filter and sort
@@ -135,31 +124,8 @@ def predict_Question_rerank_crossencoder(question, model, search_fn, k_retrieve=
 
     return all_results
 
-def QA_with_in_context_learning(question):
-    candiated_passages=predict_Question_rerank_crossencoder(question, model, search_fn=search, k_retrieve=70)
-    genai.configure(api_key="API_KEY")
-    model2 = genai.GenerativeModel("gemini-2.5-flash")
-    context = "\n".join([f"Passage {i+1}: {p}" for i, p in enumerate(candiated_passages)])
-    prompt=template(question,context)
-    response = model2.generate_content(prompt)
-    return response.text
-
+# Zero shot question answering
 def QA(question):
-    candiated_passages=predict_Question_rerank_crossencoder(question, model, search_fn=search, k_retrieve=70)
-    genai.configure(api_key="API_KEY")
-    model2 = genai.GenerativeModel("gemini-2.5-flash")
-    context = "\n".join([f"Passage {i+1}: {p}" for i, p in enumerate(candiated_passages)])
-    prompt = f"""
-      You are a question answering system.
-      Question: {question}
-      Context passages:{context}
-      Give a concise short answer using only the information from the passages.
-     """
-    response = model2.generate_content(prompt)
-    return response.text
-
-
-def QA_model(question):
     candiated_passages=predict_Question_rerank_crossencoder(question, model, search_fn=search, k_retrieve=70)
     context = "\n".join([f"Passage {i+1}: {p}" for i, p in enumerate(candiated_passages)])
     prompt = f"""
@@ -200,8 +166,8 @@ def QA_model(question):
   
     return response.json()["choices"][0]["message"]["content"]
 
-   
-def QA_with_in_context_learning_model(question):
+# Few shot question answering
+def QA_with_in_context_learning(question):
     candiated_passages=predict_Question_rerank_crossencoder(question, model, search_fn=search, k_retrieve=70)
     context = "\n".join([f"Passage {i+1}: {p}" for i, p in enumerate(candiated_passages)])
     prompt=template(question,context)

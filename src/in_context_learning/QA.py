@@ -7,21 +7,12 @@ import faiss
 import numpy as np
 import torch
 from tqdm import tqdm
-from sentence_transformers import CrossEncoder, InputExample, SentenceTransformer
-from transformers import AutoTokenizer, AutoModel
-from huggingface_hub import login, hf_hub_download
-from sklearn.model_selection import train_test_split
-from torch.utils.data import Dataset, DataLoader
-from collections import defaultdict
+from sentence_transformers import CrossEncoder, SentenceTransformer
+
 import ast
-import random
-import os
-import gzip
-import re
-import google.generativeai as genai
 import re
 from huggingface_hub import snapshot_download
-from run import template
+from retrieve_demonstrations import template
 import requests
 import json
 snapshot_download(
@@ -38,22 +29,23 @@ retrieval_model = SentenceTransformer("retriever_model/NAMAA-retriever-cosine-fi
 retrieval_tokenizer = retrieval_model.tokenizer
 retrieval_model.to(device)
 retrieval_model.eval()
+model = CrossEncoder("yoriis/GTE-tydi-quqa-haqa")
+diacritics_pattern = re.compile(r'[\u064B-\u0652\u0670]')
 
-# EMBEDS FUNCTION
+# Encoding Function
 def get_embedding(text):
     with torch.no_grad():
         emb = retrieval_model.encode(text, convert_to_numpy=True, device=device)
     return emb
+
+# Indexing Function
 
 def build_faiss_index(embeddings):
     index = faiss.IndexFlatIP(embeddings.shape[1])
     index.add(embeddings)
     return index
 
-model = CrossEncoder("yoriis/GTE-tydi-quqa-haqa")
-
-diacritics_pattern = re.compile(r'[\u064B-\u0652\u0670]')
-
+# Load Quran data files
 quran_passages = []
 with open("/content/Islamic-Question-Answering-System/data/QH-QA-25_Subtask2_QPC_v1.1.tsv", "r", encoding="utf-8") as f:
     for line in f:
@@ -63,6 +55,7 @@ with open("/content/Islamic-Question-Answering-System/data/QH-QA-25_Subtask2_QPC
             passage_text = parts[1]
             quran_passages.append({"text": passage_text, "source": "quran", "id": passage_id})
 
+# Load Hadith data files
 hadith_passages = []
 with open("/content/Islamic-Question-Answering-System/data/QH-QA-25_Subtask2_Sahih-Bukhari_v1.0.jsonl", "r", encoding="utf-8") as f:
     for line in f:
@@ -84,6 +77,7 @@ quran_texts = [p["text"] for p in quran_passages]
 hadith_texts = [p["text"] for p in hadith_passages]
 
 
+# Quran & Hadith Embeddings
 quran_embeddings = retrieval_model.encode(
     quran_texts,
     convert_to_numpy=True,
@@ -91,7 +85,6 @@ quran_embeddings = retrieval_model.encode(
     show_progress_bar=True,
     normalize_embeddings=True
 )
-
 hadith_embeddings = retrieval_model.encode(
     hadith_texts,
     convert_to_numpy=True,
@@ -99,9 +92,12 @@ hadith_embeddings = retrieval_model.encode(
     show_progress_bar=True,
     normalize_embeddings=True
 )
+
+# Quran & Hadith Indexing 
 quran_index = build_faiss_index(quran_embeddings)
 hadith_index = build_faiss_index(hadith_embeddings)
 
+# Return list of  Relevant Quran & Hadith Passages with Score
 def search(query, k_quran=50, k_hadith=20):
     query_emb = get_embedding(query)
 
@@ -133,17 +129,22 @@ def search(query, k_quran=50, k_hadith=20):
     results = sorted(results, key=lambda x: x['score'], reverse=True)
     return results
 
+# Return list of Rerank Relevant Quran & Hadith Passages with Score
 def predict_Question_rerank_crossencoder(question, model, search_fn, k_retrieve=70, score_threshold=0.15, max_returned=20):
     all_results = []
+    # List of Quran & Hadith Passages with Score
     retrieved = search_fn(question)
-    candidate_texts = [r["text"] for r in retrieved]
-    #candidate_ids = [r["id"] for r in retrieved]
 
-    # rerank step
+    # get texts of retrieved passages 
+    candidate_texts = [r["text"] for r in retrieved]
+ 
+    # rerank retrieved Quran & Hadith Passages based on the most relevant for question
     reranked = model.rank(query=question, documents=candidate_texts)
-    # filter and sort
+   
+    # handle the no-answer questions
     filtered = [item for item in reranked if item['score'] >= score_threshold]
     filtered = sorted(filtered, key=lambda x: x['score'], reverse=True)[:max_returned]
+   
     # check if zero answer
     if not filtered:
             all_results.append({
@@ -159,20 +160,16 @@ def predict_Question_rerank_crossencoder(question, model, search_fn, k_retrieve=
 
     return all_results
 
+# Answer Extraction Function
 def QA(question):
+    # get the rerank passages relevent for question
     candiated_passages=predict_Question_rerank_crossencoder(question, model, search_fn=search, k_retrieve=70)
-    genai.configure(api_key="API_KEY")
-    model2 = genai.GenerativeModel("gemini-2.5-flash")
     context = "\n".join([f"Passage {i+1}: {p}" for i, p in enumerate(candiated_passages)])
-    prompt=template(question,context)
-    response = model2.generate_content(prompt)
-    return response.text
 
-def QA_model(question,model2):
-    candiated_passages=predict_Question_rerank_crossencoder(question, model, search_fn=search, k_retrieve=70)
-    context = "\n".join([f"Passage {i+1}: {p}" for i, p in enumerate(candiated_passages)])
+    #create Answer Extraction Template with few examples
     prompt=template(question,context)
- 
+    
+    # Matral ai API
     response = requests.post(
     url="https://openrouter.ai/api/v1/chat/completions",
     headers={
@@ -182,7 +179,7 @@ def QA_model(question,model2):
         "X-Title": "<YOUR_SITE_NAME>", # Optional. Site title for rankings on openrouter.ai.
     },
     data=json.dumps({
-        "model": model2,
+        "model":"mistralai/devstral-2512:free",
         "messages": [
         {
             "role": "user",
@@ -200,33 +197,7 @@ def QA_model(question,model2):
 
 
 
-#print(get_relevant_passages("اريد حديث عن عدم التحدث بسوء"))
-Questions=[
- "من هو أول إنسان خلقه الله؟",
- "من هو النبي الذي بنى الكعبة؟",
- "لماذا حرّم الله شرب الخمر في القرآن؟",
- "ما العقوبة التي ذكرها القرآن للسرقة؟",
- "كيف وصف القرآن يوم القيامة؟",
- "ماذا قال القرآن عن مساعدة الفقراء؟",
- "ماذا قال النبي ﷺ عن النية؟",
- "أي حديث يصف أركان الإسلام؟",
- "ما الحديث الذي يصف الإيمان؟",
- "ما هى الدلائل التي تشير بأن الانسان مخير؟",
- "ما هو النبي المعروف بالصبر؟",
- "ما هي الصفات السلبية لطبيعة النفس الإنسانية؟",
- "ما هي وصايا لقمان لابنه؟",
- "ما هي شجرة الزقوم؟",
- "كم مدة عدة الأرملة؟"
 
-]
-
-for question in Questions:
-    print (f"=============== السؤال :  {question} ====================")
-    answer= QA(question)
-    #answer=clean_and_format(answer)
-    print("\n")
-    print("الاجابة : ",answer)
-    print("\n\n")
 
 
 
