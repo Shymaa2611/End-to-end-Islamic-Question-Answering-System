@@ -13,8 +13,8 @@
   <img src="https://img.shields.io/badge/Python-3.10-blue">
   <img src="https://img.shields.io/badge/LLM-Mistral-orange">
   <img src="https://img.shields.io/badge/Task-Islamic%20QA-success">
-  <a href="https://arxiv.org/abs/XXXX.XXXXX">
-    <img src="https://img.shields.io/badge/Paper-arXiv-red">
+  <a href="https://drive.google.com/file/d/FILE_ID/view">
+    <img src="https://img.shields.io/badge/Paper-Google%20Drive-blue">
   </a>
 </p>
 
