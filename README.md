@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/Python-3.10-blue">
   <img src="https://img.shields.io/badge/LLM-Mistral-orange">
   <img src="https://img.shields.io/badge/Task-Islamic%20QA-success">
-  <a href="https://drive.google.com/file/d/1Ei1XoBuquWKhZScuCQ9BhKTUksk67F2y/view?usp=drive_link">
+  <a href="https://drive.google.com/file/d/1SaO_Yaw60Fn-v5K-CCFiHZKtK_PNSS29/view?usp=drive_link">
     <img src="https://img.shields.io/badge/Paper-Google%20Drive-blue">
   </a>
 </p>
