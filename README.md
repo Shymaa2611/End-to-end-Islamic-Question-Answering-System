@@ -1,3 +1,14 @@
+---
+title: VOIP
+emoji: ⚡
+colorFrom: pink
+colorTo: yellow
+sdk: docker
+pinned: false
+short_description: Diagnosis VOIP Quality of Service
+startup_duration_timeout: 1h
+---
+
 <p align="center">
   <img src="https://img.icons8.com/color/96/koran.png" width="70"/>
 </p>
@@ -185,3 +196,6 @@ python src/Evaluation/eval.py
 
 This project introduces a structured, evidence-grounded Islamic QA framework that combines retrieval, reranking, in-context learning, and constrained LLM generation.
 The architecture ensures factual reliability, contextual relevance, and faithfulness to Qur’anic and Hadith sources while providing a scalable foundation for Arabic religious question answering systems.
+
+
+

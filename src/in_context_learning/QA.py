@@ -8,13 +8,16 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from sentence_transformers import CrossEncoder, SentenceTransformer
-
 import ast
 import re
 from huggingface_hub import snapshot_download
 from retrieve_demonstrations import template
 import requests
 import json
+
+from dotenv import load_dotenv
+import os
+
 snapshot_download(
     repo_id="SeragAmin/NAMAA-retriever-cosine-final_60-90",
     repo_type="model",
@@ -23,6 +26,7 @@ snapshot_download(
 )
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 # LOAD RETRIEVAL MODEL
 retrieval_model = SentenceTransformer("retriever_model/NAMAA-retriever-cosine-final_contrastive_ara_top70/checkpoint-1985")
@@ -161,7 +165,7 @@ def predict_Question_rerank_crossencoder(question, model, search_fn, k_retrieve=
     return all_results
 
 # Answer Extraction Function
-def QA(question):
+def QA(question,api_key):
     # get the rerank passages relevent for question
     candiated_passages=predict_Question_rerank_crossencoder(question, model, search_fn=search, k_retrieve=70)
     context = "\n".join([f"Passage {i+1}: {p}" for i, p in enumerate(candiated_passages)])
@@ -173,7 +177,7 @@ def QA(question):
     response = requests.post(
     url="https://openrouter.ai/api/v1/chat/completions",
     headers={
-        "Authorization": "Bearer API_KEY",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "<YOUR_SITE_URL>", # Optional. Site URL for rankings on openrouter.ai.
         "X-Title": "<YOUR_SITE_NAME>", # Optional. Site title for rankings on openrouter.ai.
