@@ -99,7 +99,7 @@ def search(query, k_quran=50, k_hadith=20):
 
 
 # Return list of Rerank Relevant Quran & Hadith Passages with Score
-def predict_Question_rerank_crossencoder(question, model, search_fn, k_retrieve=70, score_threshold=0.15, max_returned=5):
+def predict_Question_rerank_crossencoder(question, model, search_fn, k_retrieve=70, score_threshold=0.15, max_returned=20):
     all_results = []
     retrieved = search_fn(question)
     candidate_texts = [r["text"] for r in retrieved]
@@ -147,7 +147,7 @@ def QA(question):
     response = requests.post(
     url="https://openrouter.ai/api/v1/chat/completions",
     headers={
-        "Authorization": "Bearer API_KEY",
+        "Authorization": "Bearer <API_KEY>",
         "Content-Type": "application/json",
         "HTTP-Referer": "<YOUR_SITE_URL>", 
         "X-Title": "<YOUR_SITE_NAME>", 
@@ -174,7 +174,7 @@ def QA_with_in_context_learning(question):
     response = requests.post(
     url="https://openrouter.ai/api/v1/chat/completions",
     headers={
-        "Authorization": "Bearer API_KEY",
+        "Authorization": "Bearer <API_KEY>",
         "Content-Type": "application/json",
         "HTTP-Referer": "<YOUR_SITE_URL>", 
         "X-Title": "<YOUR_SITE_NAME>", 

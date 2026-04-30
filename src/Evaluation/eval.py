@@ -5,6 +5,10 @@ import torch
 import numpy as np
 from transformers import AutoTokenizer, AutoModel
 from sklearn.metrics.pairwise import cosine_similarity
+from QA import QA , QA_with_in_context_learning
+import time
+from sentence_transformers import SentenceTransformer
+from huggingface_hub import snapshot_download
 
 class EvaluationMetrics:
     def __init__(self):
@@ -18,7 +22,19 @@ class EvaluationMetrics:
         num_layers=12,
         lang="ar"
         )
-    
+
+
+    def load_model(self):
+        snapshot_download(
+        repo_id="SeragAmin/NAMAA-retriever-cosine-final_60-90",
+        repo_type="model",
+        local_dir="retriever_model",
+        allow_patterns="NAMAA-retriever-cosine-final_contrastive_ara_top70/checkpoint-1985/*" )
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model_path = "retriever_model/NAMAA-retriever-cosine-final_contrastive_ara_top70/checkpoint-1985"
+        retrieval_model = SentenceTransformer(model_path, device=device)
+        return retrieval_model
+
     # load test data
     def load_data_csv(self,file_path):
         df = pd.read_csv(file_path)
@@ -97,19 +113,86 @@ class EvaluationMetrics:
         )
     
     # exact match metric
-    def exact_match_score(self,prediction, ground_truth,):
+    def exact_match_score(self,prediction, ground_truth):
         if len(prediction) == 0: 
             return 0
         return (self.normalize_text(prediction) == self.normalize_text(ground_truth))
+  
+   # Embedding
+    def embedding(self,text):
+        endcoded_model=self.load_model()
+        embs = endcoded_model.encode(
+        text,
+        batch_size=64,
+        normalize_embeddings=True,
+        convert_to_numpy=True )
 
+        return embs
+
+    # preprocessing of hallucination
+    def hallucination_preprocessing(self,df_path): 
+        df = pd.read_json(df_path)
+        df["prediction"] = df["prediction"].fillna("").astype(str)
+        df["keypoints"] = df["keypoints"].apply(
+            lambda x: x if isinstance(x, list) else []
+        )
+
+        df["keypoints"] = df["keypoints"].apply(
+            lambda lst: [str(kp) for kp in lst if kp is not None])
+        
+        all_predictions = df["prediction"].tolist()
+        all_keypoints = [kp for sublist in df["keypoints"] for kp in sublist]
+        pred_embs = self.embedding(all_predictions)
+        kp_embs=self.embedding(all_keypoints)
+        idx = 0
+        kp_embs_grouped = []
+        for sublist in df["keypoints"]:
+            kp_embs_grouped.append(kp_embs[idx: idx + len(sublist)])
+            idx += len(sublist)
+
+        df["Prediction_Embedding"] = list(pred_embs)
+        df["Keypoints_Embeddings"] = kp_embs_grouped
+
+        return df
+        
+    # calculate hallucination
+    def compute_hallucination_score(self,df_path, threshold=0.5):
+        df=self.hallucination_preprocessing(df_path)
+        total_hallucination = 0.0
+        n = len(df)
+        for _, row in df.iterrows():
+            pred = np.array(row["Prediction_Embedding"]).reshape(1, -1)
+            kps = np.array(row["Keypoints_Embeddings"])
+            if len(kps) == 0:
+                continue
+            sims = cosine_similarity(pred, kps)[0]
+            contradictions = np.sum(sims <= threshold)
+            total_hallucination += contradictions / len(kps)
+        return  total_hallucination/n
+
+
+    # calculate zeroshot latency
+    def zeroshot_latency(self,question):
+        start = time.perf_counter()
+        QA(question)
+        end = time.perf_counter()
+        return end - start
+    
+    # calculate fewshot latency
+    def fewshot_latency(self,question):
+        start = time.perf_counter()
+        QA_with_in_context_learning(question)
+        end = time.perf_counter()
+        return end - start
 
 def main():
     metrics=EvaluationMetrics()
     eval_data = metrics.load_data_csv("/content/End-to-end-Islamic-Question-Answering-System/data/Evaluation Data/Zeroshot/test_data_zeroshot_10.csv")
-    P_scores, R_scores, F1_scores , Cosine_Similarity,EM = [], [], [], [] , []
+    P_scores, R_scores, F1_scores , Cosine_Similarity,EM,zshot_latency,fshot_latency  = [], [], [], [] , [],[] ,[]
     for item in eval_data:
         truth = item["answer"]
         generated =item["generatedAnswer"]
+        question=item["question"]
         p, r, f1 = metrics.compute_bert_score(truth, generated)
         score = metrics.cosine_sim(truth, generated)
         em=metrics.exact_match_score(generated,truth)
@@ -118,14 +201,18 @@ def main():
         F1_scores.append(f1)
         Cosine_Similarity.append(score)
         EM.append(em)
+        zshot_latency.append( metrics.zeroshot_latency(question))
+        fshot_latency.append( metrics.fewshot_latency(question))
 
     print(f"Precision: {sum(P_scores)/len(eval_data)}")
     print(f"Recall:    {sum(R_scores)/len(eval_data)}")
     print(f"F1 Score:  {sum(F1_scores)/len(eval_data)}")
     print(f"Cosine_Similarity:  {sum(Cosine_Similarity)/len(eval_data)}")
     print(f"Exact Match:  {sum(EM)/len(EM)}")
+    print(f"zeroshot latency:  {sum(zshot_latency)/len(eval_data)}")
+    print(f"fewshot latency:  {sum(fshot_latency)/len(eval_data)}")
+    hallucination_score= metrics.compute_hallucination_score("", threshold=0.5)
+    print("Hallucination Score:", hallucination_score)
 
-
-
-if __name__=="main":
+if __name__=="__main__":
     main()

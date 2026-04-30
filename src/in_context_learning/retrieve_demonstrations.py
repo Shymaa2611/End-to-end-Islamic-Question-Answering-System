@@ -51,8 +51,9 @@ def load_passages_csv(file_path, source_name):
     return passages
 
 # Load Quran & Hadith Passages
-quran_passages = load_passages_csv("/content/Islamic-Question-Answering-System/data/QUQA/train_quqa.csv", "quran")
-hadith_passages = load_passages_csv("/content/Islamic-Question-Answering-System/data/HAQA/haqa_train.csv", "hadith")
+
+quran_passages = load_passages_csv("/content/End-to-end-Islamic-Question-Answering-System/data/QUQA/train_quqa.csv", "quran")
+hadith_passages = load_passages_csv("/content/End-to-end-Islamic-Question-Answering-System/data/HAQA/haqa_train.csv", "hadith")
 all_passages = quran_passages + hadith_passages
 print(f"Total passages loaded: {len(all_passages)}")
 
@@ -85,7 +86,7 @@ def search(query, k_quran=50, k_hadith=20):
     return results
 
 # Return list of Rerank Relevant Quran & Hadith Passages with Score
-def predict_Question_rerank(question, model, search_fn, all_passages, k_retrieve=70, score_threshold=0.15, max_returned=5):
+def predict_Question_rerank(question, model, search_fn, all_passages, k_retrieve=70, score_threshold=0.15, max_returned=1):
     all_results = []
     # List of Quran & Hadith Passages with Score
     retrieved = search_fn(question)

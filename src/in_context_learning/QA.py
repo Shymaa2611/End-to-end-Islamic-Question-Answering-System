@@ -51,7 +51,7 @@ def build_faiss_index(embeddings):
 
 # Load Quran data files
 quran_passages = []
-with open("/content/Islamic-Question-Answering-System/data/QH-QA-25_Subtask2_QPC_v1.1.tsv", "r", encoding="utf-8") as f:
+with open("/content/End-to-end-Islamic-Question-Answering-System/data/QH-QA-25_Subtask2_QPC_v1.1.tsv", "r", encoding="utf-8") as f:
     for line in f:
         parts = line.strip().split("\t")
         if len(parts) >= 2:
@@ -61,7 +61,7 @@ with open("/content/Islamic-Question-Answering-System/data/QH-QA-25_Subtask2_QPC
 
 # Load Hadith data files
 hadith_passages = []
-with open("/content/Islamic-Question-Answering-System/data/QH-QA-25_Subtask2_Sahih-Bukhari_v1.0.jsonl", "r", encoding="utf-8") as f:
+with open("/content/End-to-end-Islamic-Question-Answering-System/data/QH-QA-25_Subtask2_Sahih-Bukhari_v1.0.jsonl", "r", encoding="utf-8") as f:
     for line in f:
         try:
             item = ast.literal_eval(line.strip())
